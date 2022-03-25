@@ -5,6 +5,7 @@ It implements the Reader specification, but your plugin may choose to
 implement multiple readers or even other plugin contributions. see:
 https://napari.org/plugins/stable/guides.html#readers
 """
+import nd2
 import numpy as np
 
 
@@ -29,11 +30,28 @@ def napari_get_reader(path):
         path = path[0]
 
     # if we know we cannot read the file, we immediately return None.
-    if not path.endswith(".npy"):
-        return None
+    if path.endswith(".nd2"):
+        return read_nd2
 
     # otherwise we return the *function* that can read ``path``.
     return reader_function
+
+
+def read_nd2(path):
+    data = nd2.ND2File(path)
+    ddata = data.to_dask()
+    return [
+        (
+            ddata,
+            dict(
+                channel_axis=1,
+                name=["BF", "fluo"],
+                colormap=["gray", "green"],
+                contrast_limits=[(8500, 35000), (150, 20000)],
+            ),
+            "image",
+        )
+    ]
 
 
 def reader_function(path):
@@ -54,7 +72,8 @@ def reader_function(path):
         A list of LayerData tuples where each tuple in the list contains
         (data, metadata, layer_type), where data is a numpy array, metadata is
         a dict of keyword arguments for the corresponding viewer.add_* method
-        in napari, and layer_type is a lower-case string naming the type of layer.
+        in napari, and layer_type is a lower-case string naming the type of
+        layer.
         Both "meta", and "layer_type" are optional. napari will default to
         layer_type=="image" if not provided
     """
