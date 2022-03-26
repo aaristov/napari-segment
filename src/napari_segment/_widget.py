@@ -13,9 +13,9 @@ import napari
 import numpy as np
 from magicgui import magic_factory
 from qtpy.QtWidgets import QHBoxLayout, QPushButton, QWidget
-from scipy.ndimage import binary_dilation
-from segment.seg import segment_bf
+from scipy.ndimage import label, binary_dilation, gaussian_filter, binary_erosion, binary_fill_holes
 from skimage.measure import regionprops_table
+# import matplotlib.pyplot as plt
 
 
 class ExampleQWidget(QWidget):
@@ -42,6 +42,7 @@ def example_magic_widget(img_layer: "napari.layers.Image"):
     print(f"you have selected {img_layer}")
 
 
+
 # Uses the `autogenerate: true` flag in the plugin manifest
 # to indicate it should be wrapped as a magicgui to autogenerate
 # a widget.
@@ -51,31 +52,32 @@ def segment_organoid(
     fluo_layer: "napari.layers.Image",
     donut=10,
     thr: float = 0.4,
-) -> napari.types.LabelsData:
+) -> napari.types.LayerDataTuple:
     # frame = napari.current_viewer().cursor.position[0]
+    kwargs = {}
+
     try:
         p = Pool()
-        stack = list(
-            p.map(
+        stack = p.map(
                 partial(seg_frame, thr=thr, donut=donut),
                 zip(BF_layer.data.compute(), fluo_layer.data.compute()),
-            )
         )
+        print((out := np.array(stack)).shape)
+        return [(out, {"name": "label", **kwargs}, 'labels')]
+        
     except Exception as e:
         print(e.args)
+        raise e
     finally:
         p.close()
-
-    return np.array(stack)
-    # (bg_mask.astype('uint8'), {"name": "donut", **kwargs}, 'image')
 
 
 def seg_frame(data, thr, donut):
     bf, fluo = data
-    label = segment_bf(bf, thr=thr, plot=False)
-    print(bf.dtype, bf.shape)
+    labels = segment_bf(bf, thr=thr, plot=False)
+    print(".",)
     props = regionprops_table(
-        label,
+        labels,
         intensity_image=fluo,
         properties=(
             "label",
@@ -89,9 +91,34 @@ def seg_frame(data, thr, donut):
     # print(props)
     biggest_prop_index = np.argmax(props["area"])
     label_of_biggest_object = props["label"][biggest_prop_index]
-    spheroid_mask = label == label_of_biggest_object
-    bg_mask = np.bitwise_xor(
-        binary_dilation(spheroid_mask, structure=np.ones((donut, donut))),
-        spheroid_mask,
-    )
-    return spheroid_mask.astype("uint16") + 2 * bg_mask.astype("uint8")
+    spheroid_mask = labels == label_of_biggest_object
+    # bg_mask = np.bitwise_xor(
+    #     binary_dilation(spheroid_mask, structure=np.ones((donut, donut))),
+    #     spheroid_mask,
+    # )
+    return spheroid_mask.astype("uint16")# + 2 * bg_mask.astype("uint8")
+
+
+def segment_bf(well, thr=0.2, smooth=10, erode=10, fill=True, plot=False):
+    '''
+    Serments input 2d array using thresholded gradient with filling
+    Returns SegmentedImage object
+    '''
+    grad = get_2d_gradient(well)
+    sm = gaussian_filter(grad, smooth)
+#     sm = multiwell.gaussian_filter(well, smooth)
+    
+    regions = sm > thr * sm.max()
+    
+    if fill:
+        regions = binary_fill_holes(regions)
+    
+    if erode:
+        regions = binary_erosion(regions, iterations=erode)
+    labels, _ = label(regions)
+    
+    return labels
+
+def get_2d_gradient(xy):
+    gx, gy = np.gradient(xy)
+    return np.sqrt(gx ** 2 + gy ** 2)
