@@ -38,10 +38,11 @@ def napari_get_reader(path):
 
 
 def read_nd2(path):
+    print(f"opening {path}")
     data = nd2.ND2File(path)
     ddata = data.to_dask()
     try:
-        channel_axis = list(d.sizes.keys()).index('C')
+        channel_axis = list(data.sizes.keys()).index("C")
     except ValueError:
         channel_axis = None
     return [
@@ -49,9 +50,11 @@ def read_nd2(path):
             ddata,
             dict(
                 channel_axis=channel_axis,
-                name=["BF", "fluo"],
-                colormap=["gray", "green"],
-                contrast_limits=[(8500, 35000), (150, 20000)],
+                name=[ch.channel.name for ch in data.metadata.channels],
+                # colormap=[hex(ch.channel.colorRGB)
+                # for ch in data.metadata.channels],
+                # scale=data.metadata.channels[0].volume.axesCalibration[:]
+                # contrast_limits=[(8500, 35000), (150, 20000)],
             ),
             "image",
         )
