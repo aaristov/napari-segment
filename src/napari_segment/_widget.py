@@ -7,14 +7,21 @@ see: https://napari.org/plugins/stable/guides.html#widgets
 Replace code below according to your needs.
 """
 from functools import partial
-from multiprocessing import Pool
 
+import dask
 import napari
 import numpy as np
 from magicgui import magic_factory
 from qtpy.QtWidgets import QHBoxLayout, QPushButton, QWidget
-from scipy.ndimage import label, binary_dilation, gaussian_filter, binary_erosion, binary_fill_holes
+from scipy.ndimage import (
+    binary_dilation,
+    binary_erosion,
+    binary_fill_holes,
+    gaussian_filter,
+    label,
+)
 from skimage.measure import regionprops_table
+
 # import matplotlib.pyplot as plt
 
 
@@ -42,83 +49,85 @@ def example_magic_widget(img_layer: "napari.layers.Image"):
     print(f"you have selected {img_layer}")
 
 
+def save_values(val):
+    print(f"Saving {val}")
+
 
 # Uses the `autogenerate: true` flag in the plugin manifest
 # to indicate it should be wrapped as a magicgui to autogenerate
 # a widget.
-@magic_factory()
+@magic_factory(
+    auto_call=True,
+    thr={
+        "label": "Threshold",
+        "widget_type": "FloatSlider",
+        "min": 0.1,
+        "max": 0.5,
+    },
+    erode={"widget_type": "Slider", "min": 1, "max": 10},
+)
 def segment_organoid(
     BF_layer: "napari.layers.Image",
     fluo_layer: "napari.layers.Image",
-    donut=10,
     thr: float = 0.4,
+    erode: int = 10,
+    donut=10,
 ) -> napari.types.LayerDataTuple:
     # frame = napari.current_viewer().cursor.position[0]
     kwargs = {}
-
-    try:
-        p = Pool()
-        stack = p.map(
-                partial(seg_frame, thr=thr, donut=donut),
-                zip(BF_layer.data.compute(), fluo_layer.data.compute()),
-        )
-        print((out := np.array(stack)).shape)
-        return [(out, {"name": "label", **kwargs}, 'labels')]
-        
-    except Exception as e:
-        print(e.args)
-        raise e
-    finally:
-        p.close()
+    ddata = BF_layer.data
+    labels = ddata.map_blocks(
+        partial(segment_bf, thr=thr, erode=erode), dtype=ddata.dtype
+    )
+    selected_labels = dask.array.map_blocks(filter_biggest, labels, donut)
+    print(selected_labels.shape)
+    return [
+        (labels, {"name": "raw_labels", "visible": False, **kwargs}, "labels"),
+        (selected_labels, {"name": "selected labels", **kwargs}, "labels"),
+    ]
 
 
-def seg_frame(data, thr, donut):
-    bf, fluo = data
-    labels = segment_bf(bf, thr=thr, plot=False)
-    print(".",)
+def filter_biggest(labels, donut=10):
     props = regionprops_table(
-        labels,
-        intensity_image=fluo,
+        labels[0],
         properties=(
             "label",
-            "centroid",
-            "bbox",
-            "mean_intensity",
             "area",
-            "major_axis_length",
         ),
     )
-    # print(props)
     biggest_prop_index = np.argmax(props["area"])
     label_of_biggest_object = props["label"][biggest_prop_index]
-    spheroid_mask = labels == label_of_biggest_object
-    # bg_mask = np.bitwise_xor(
-    #     binary_dilation(spheroid_mask, structure=np.ones((donut, donut))),
-    #     spheroid_mask,
-    # )
-    return spheroid_mask.astype("uint16")# + 2 * bg_mask.astype("uint8")
+    spheroid_mask = labels[0] == label_of_biggest_object
+    bg_mask = np.bitwise_xor(
+        binary_dilation(spheroid_mask, structure=np.ones((donut, donut))),
+        spheroid_mask,
+    )
+    return (
+        spheroid_mask.astype("uint16") + 2 * bg_mask.astype("uint16")
+    ).reshape(labels.shape)
 
 
 def segment_bf(well, thr=0.2, smooth=10, erode=10, fill=True, plot=False):
-    '''
+    """
     Serments input 2d array using thresholded gradient with filling
     Returns SegmentedImage object
-    '''
-    grad = get_2d_gradient(well)
+    """
+    grad = get_2d_gradient(well[0])
     sm = gaussian_filter(grad, smooth)
-#     sm = multiwell.gaussian_filter(well, smooth)
-    
+    #     sm = multiwell.gaussian_filter(well, smooth)
+
     regions = sm > thr * sm.max()
-    
+
     if fill:
         regions = binary_fill_holes(regions)
-    
+
     if erode:
         regions = binary_erosion(regions, iterations=erode)
     labels, _ = label(regions)
-    
-    return labels
+
+    return labels.reshape(well.shape)
+
 
 def get_2d_gradient(xy):
     gx, gy = np.gradient(xy)
-    return np.sqrt(gx ** 2 + gy ** 2)
+    return np.sqrt(gx**2 + gy**2)
