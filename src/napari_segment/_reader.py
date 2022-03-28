@@ -51,8 +51,7 @@ def read_nd2(path):
             dict(
                 channel_axis=channel_axis,
                 name=[ch.channel.name for ch in data.metadata.channels],
-                # colormap=[hex(ch.channel.colorRGB)
-                # for ch in data.metadata.channels],
+                colormap=["gray", "green"],
                 # scale=data.metadata.channels[0].volume.axesCalibration[:]
                 # contrast_limits=[(8500, 35000), (150, 20000)],
             ),
