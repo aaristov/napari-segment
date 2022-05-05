@@ -5,6 +5,10 @@ It implements the Reader specification, but your plugin may choose to
 implement multiple readers or even other plugin contributions. see:
 https://napari.org/plugins/stable/guides.html#readers
 """
+import json
+import os
+
+import dask
 import nd2
 import numpy as np
 
@@ -33,28 +37,62 @@ def napari_get_reader(path):
     if path.endswith(".nd2"):
         return read_nd2
 
+    if path.endswith(".zarr"):
+        return read_zarr
+
     # otherwise we return the *function* that can read ``path``.
     return reader_function
+
+
+def read_zarr(path):
+    print(f"reading {path}")
+    try:
+        attrs = json.load(open(os.path.join(path, ".zattrs")))
+        info = attrs["multiscales"]["multiscales"][0]
+        channel_axis = info["channel_axis"]
+        print(f"found channel axis {channel_axis}")
+        dataset_paths = [
+            os.path.join(path, d["path"]) for d in info["datasets"]
+        ]
+        datasets = [dask.array.from_zarr(p) for p in dataset_paths]
+    except Exception as e:
+        raise e
+    return [
+        (
+            datasets,
+            {
+                "channel_axis": channel_axis,
+                "colormap": ["gray", "inferno"],
+                "contrast_limits": [(0, 65000), (0, 6000)],
+            },
+            "image",
+        )
+    ]
 
 
 def read_nd2(path):
     print(f"opening {path}")
     data = nd2.ND2File(path)
+    print(data.sizes)
     ddata = data.to_dask()
+    # colormap = ["gray", "green"]
     try:
         channel_axis = list(data.sizes.keys()).index("C")
     except ValueError:
+        print(f"No channels, {data.sizes}")
         channel_axis = None
+        # colormap = ["gray"]
     return [
         (
             ddata,
-            dict(
-                channel_axis=channel_axis,
-                name=[ch.channel.name for ch in data.metadata.channels],
-                colormap=["gray", "green"],
-                # scale=data.metadata.channels[0].volume.axesCalibration[:]
-                # contrast_limits=[(8500, 35000), (150, 20000)],
-            ),
+            {"channel_axis": channel_axis},
+            # dict(
+            #     channel_axis=channel_axis,
+            #     name=[ch.channel.name for ch in data.metadata.channels],
+            # colormap=colormap,
+            # scale=data.metadata.channels[0].volume.axesCalibration[:]
+            # contrast_limits=[(8500, 35000), (150, 20000)],
+            # ),
             "image",
         )
     ]
