@@ -62,8 +62,8 @@ def read_zarr(path):
             datasets,
             {
                 "channel_axis": channel_axis,
-                "colormap": ["gray", "inferno"],
-                "contrast_limits": [(0, 65000), (0, 6000)],
+#                 "colormap": ["gray", "inferno"],
+#                 "contrast_limits": [(0, 65000), (0, 6000)],
             },
             "image",
         )
