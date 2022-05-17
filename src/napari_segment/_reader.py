@@ -57,13 +57,19 @@ def read_zarr(path):
         datasets = [dask.array.from_zarr(p) for p in dataset_paths]
     except Exception as e:
         raise e
+
+    try:
+        contrast_limits = info["lut"]
+    except KeyError:
+        contrast_limits = None
+
     return [
         (
             datasets,
             {
                 "channel_axis": channel_axis,
-                "colormap": ["gray", "inferno"],
-                "contrast_limits": [(0, 65000), (0, 6000)],
+                # "colormap": ["gray", "inferno"],
+                "contrast_limits": contrast_limits,
             },
             "image",
         )
