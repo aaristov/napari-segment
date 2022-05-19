@@ -63,13 +63,28 @@ def read_zarr(path):
     except KeyError:
         contrast_limits = None
 
+    try:
+        colormap = info["colormap"]
+    except KeyError:
+        colormap = None
+
+    try:
+        name = info["name"]
+    except KeyError:
+        print("name not found")
+        name = [os.path.basename(path)] * datasets[0].shape[channel_axis]
+    except Exception as e:
+        print("name exception", e.args)
+        name = os.path.basename(path)
+
     return [
         (
             datasets,
             {
                 "channel_axis": channel_axis,
-                # "colormap": ["gray", "inferno"],
+                "colormap": colormap,
                 "contrast_limits": contrast_limits,
+                "name": name,
             },
             "image",
         )
