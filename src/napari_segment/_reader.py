@@ -41,7 +41,10 @@ def napari_get_reader(path):
         return read_zarr
 
     # otherwise we return the *function* that can read ``path``.
-    return reader_function
+    if path.endswith(".npy"):
+        return reader_function
+
+    return None
 
 
 def read_zarr(path):
