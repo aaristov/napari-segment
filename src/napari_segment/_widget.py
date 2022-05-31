@@ -130,8 +130,9 @@ def filter_labels(labels, min_diam=50, max_diam=150, max_ecc=0.2):
         raise ValueError(
             "min value is greater than max value for the diameter filter"
         )
+    data = strip_dimensions(labels)
     props = regionprops(
-        labels[0],
+        data,
     )
     good_props = filter(
         lambda p: (d := p.major_axis_length) > min_diam
@@ -143,7 +144,7 @@ def filter_labels(labels, min_diam=50, max_diam=150, max_ecc=0.2):
     if len(good_labels) < 1:
         return np.zeros_like(labels)
     # print(f'good_labels {good_labels}')
-    mask = np.sum([labels == v for v in good_labels], axis=0)
+    mask = np.sum([data == v for v in good_labels], axis=0)
     # print(mask.shape)
     return (label(mask)[0].astype("uint16")).reshape(labels.shape)
 
