@@ -61,7 +61,7 @@ def save_values(val):
         "label": "Threshold",
         "widget_type": "FloatSlider",
         "min": 0.1,
-        "max": 0.5,
+        "max": 0.9,
     },
     erode={"widget_type": "Slider", "min": 1, "max": 10},
     min_diam={"widget_type": "Slider", "min": 10, "max": 250},
