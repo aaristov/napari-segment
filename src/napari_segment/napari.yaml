@@ -25,7 +25,7 @@ contributions:
       title: Segment organoid
   readers:
     - command: napari-segment.get_reader
-      accepts_directories: true
+      accepts_directories: True
       filename_patterns: ['*.npy', '*.nd2', '*.zarr']
   writers:
     - command: napari-segment.write_multiple

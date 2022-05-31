@@ -41,7 +41,10 @@ def napari_get_reader(path):
         return read_zarr
 
     # otherwise we return the *function* that can read ``path``.
-    return reader_function
+    if path.endswith(".npy"):
+        return reader_function
+
+    return None
 
 
 def read_zarr(path):
@@ -57,13 +60,34 @@ def read_zarr(path):
         datasets = [dask.array.from_zarr(p) for p in dataset_paths]
     except Exception as e:
         raise e
+
+    try:
+        contrast_limits = info["lut"]
+    except KeyError:
+        contrast_limits = None
+
+    try:
+        colormap = info["colormap"]
+    except KeyError:
+        colormap = None
+
+    try:
+        name = info["name"]
+    except KeyError:
+        print("name not found")
+        name = [os.path.basename(path)] * datasets[0].shape[channel_axis]
+    except Exception as e:
+        print("name exception", e.args)
+        name = os.path.basename(path)
+
     return [
         (
             datasets,
             {
                 "channel_axis": channel_axis,
-#                 "colormap": ["gray", "inferno"],
-#                 "contrast_limits": [(0, 65000), (0, 6000)],
+                "colormap": colormap,
+                "contrast_limits": contrast_limits,
+                "name": name,
             },
             "image",
         )

@@ -75,7 +75,6 @@ def save_values(val):
 )
 def segment_organoid(
     BF_layer: "napari.layers.Image",
-    fluo_layer: "napari.layers.Image",
     thr: float = 0.3,
     erode: int = 10,
     min_diam=150,
@@ -84,8 +83,13 @@ def segment_organoid(
     show_detections=True,
 ) -> napari.types.LayerDataTuple:
     # frame = napari.current_viewer().cursor.position[0]
-    kwargs = {}
+    kwargs = {"scale": BF_layer.scale}
+    print(kwargs)
     ddata = BF_layer.data
+    if isinstance(ddata, np.ndarray):
+        chunksize = np.ones(ddata.ndims)
+        chunksize[-2:] = ddata.shape[-2:]  # xy full size
+        ddata = dask.array.from_array(ddata, chunksize=chunksize)
     smooth_gradient = ddata.map_blocks(
         partial(get_gradient), dtype=ddata.dtype
     )
