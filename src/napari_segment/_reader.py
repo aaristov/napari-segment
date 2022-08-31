@@ -48,16 +48,23 @@ def napari_get_reader(path):
 
 
 def read_zarr(path):
-    print(f"reading {path}")
+    print(f"read_zarr {path}")
+
     try:
         attrs = json.load(open(os.path.join(path, ".zattrs")))
         info = attrs["multiscales"]["multiscales"][0]
+    except Exception as e:
+        raise e
+
+    dataset_paths = [os.path.join(path, d["path"]) for d in info["datasets"]]
+    datasets = [dask.array.from_zarr(p) for p in dataset_paths]
+
+    try:
         channel_axis = info["channel_axis"]
         print(f"found channel axis {channel_axis}")
-        dataset_paths = [
-            os.path.join(path, d["path"]) for d in info["datasets"]
-        ]
-        datasets = [dask.array.from_zarr(p) for p in dataset_paths]
+    except KeyError:
+        channel_axis = None
+
     except Exception as e:
         raise e
 
