@@ -14,12 +14,12 @@ contributions:
     - id: napari-segment.make_sample_data
       python_name: napari_segment._sample_data:make_sample_data
       title: Load sample data from Segment organoid
-    # - id: napari-segment.make_qwidget
-    #   python_name: napari_segment._widget:ExampleQWidget
-    #   title: Make example QWidget
-    # - id: napari-segment.make_magic_widget
-    #   python_name: napari_segment._widget:example_magic_widget
-    #   title: Make example magic widget
+    - id: napari-segment.make_qwidget
+      python_name: napari_segment._widget:ExampleQWidget
+      title: Make example QWidget
+    - id: napari-segment.make_magic_widget
+      python_name: napari_segment._widget:example_magic_widget
+      title: Make example magic widget
     - id: napari-segment.segment_organoid
       python_name: napari_segment._widget:segment_organoid
       title: Segment organoid
@@ -39,10 +39,10 @@ contributions:
       display_name: Segment organoid
       key: unique_id.1
   widgets:
-    # - command: napari-segment.make_qwidget
-    #   display_name: Example QWidget
-    # - command: napari-segment.make_magic_widget
-    #   display_name: Example Magic Widget
+    - command: napari-segment.make_qwidget
+      display_name: Example QWidget
+    - command: napari-segment.make_magic_widget
+      display_name: Example Magic Widget
     - command: napari-segment.segment_organoid
       # autogenerate: true
       display_name: Segment organoid
