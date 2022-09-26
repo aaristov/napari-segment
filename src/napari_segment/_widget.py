@@ -57,6 +57,11 @@ def save_values(val):
 # a widget.
 @magic_factory(
     auto_call=True,
+    bin={
+        "label": "binning",
+        "widget_type": "ComboBox",
+        "choices": [1, 2, 4, 8, 16],
+    },
     thr={
         "label": "Threshold",
         "widget_type": "FloatSlider",
@@ -64,8 +69,8 @@ def save_values(val):
         "max": 0.9,
     },
     erode={"widget_type": "Slider", "min": 1, "max": 10},
-    min_diam={"widget_type": "Slider", "min": 10, "max": 250},
-    max_diam={"widget_type": "Slider", "min": 150, "max": 1000},
+    min_diam={"widget_type": "Slider", "min": 100, "max": 1000},
+    max_diam={"widget_type": "Slider", "min": 150, "max": 2000},
     max_ecc={
         "label": "Eccentricity",
         "widget_type": "FloatSlider",
@@ -75,6 +80,9 @@ def save_values(val):
 )
 def segment_organoid(
     BF_layer: "napari.layers.Image",
+    bin: int = 1,
+    use_gradient=True,
+    smooth=10,
     thr: float = 0.3,
     erode: int = 10,
     min_diam=150,
@@ -83,15 +91,18 @@ def segment_organoid(
     show_detections=True,
 ) -> napari.types.LayerDataTuple:
     # frame = napari.current_viewer().cursor.position[0]
-    kwargs = {"scale": BF_layer.scale}
-    print(kwargs)
-    ddata = BF_layer.data
+
+    ddata = BF_layer.data[..., ::bin, ::bin]
     if isinstance(ddata, np.ndarray):
         chunksize = np.ones(ddata.ndims)
         chunksize[-2:] = ddata.shape[-2:]  # xy full size
         ddata = dask.array.from_array(ddata, chunksize=chunksize)
-    smooth_gradient = ddata.map_blocks(
-        partial(get_gradient), dtype=ddata.dtype
+    smooth_gradient = (
+        ddata.map_blocks(
+            partial(get_gradient, smooth=smooth), dtype=ddata.dtype
+        )
+        if use_gradient
+        else 1 - (a := ddata - ddata.min()) / a.max()
     )
     labels = smooth_gradient.map_blocks(
         partial(threshold_gradient, thr=thr, erode=erode),
@@ -101,12 +112,14 @@ def segment_organoid(
         selected_labels = dask.array.map_blocks(
             filter_labels,
             labels,
-            min_diam,
-            max_diam,
+            min_diam / bin,
+            max_diam / bin,
             max_ecc,
             dtype=ddata.dtype,
         )
-        # print(selected_labels.shape)
+        scale = np.ones((len(labels.shape),))
+        scale[-2:] = bin
+        kwargs = {"scale": scale}
         return [
             (
                 labels,
@@ -119,7 +132,12 @@ def segment_organoid(
         return [
             (
                 labels,
-                {"name": "Detections", "visible": True, **kwargs},
+                {
+                    "name": "Detections",
+                    "visible": True,
+                    "scale": scale,
+                    **kwargs,
+                },
                 "labels",
             ),
         ]
@@ -149,7 +167,7 @@ def filter_labels(labels, min_diam=50, max_diam=150, max_ecc=0.2):
     return (label(mask)[0].astype("uint16")).reshape(labels.shape)
 
 
-def get_gradient(bf_data: np.ndarray, smooth=10):
+def get_gradient(bf_data: np.ndarray, smooth=10, bin=1):
     """
     Removes first dimension,
     Computes gradient of the image,
@@ -157,10 +175,10 @@ def get_gradient(bf_data: np.ndarray, smooth=10):
     Returns SegmentedImage object
     """
     data = strip_dimensions(bf_data)
-    gradient = get_2d_gradient(data)
+    gradient = get_2d_gradient(data[::bin, ::bin])
     smoothed_gradient = gaussian_filter(gradient, smooth)
     #     sm = multiwell.gaussian_filter(well, smooth)
-    return smoothed_gradient.reshape(bf_data.shape)
+    return smoothed_gradient.reshape(bf_data[..., ::bin, ::bin].shape)
 
 
 def threshold_gradient(
@@ -182,12 +200,15 @@ def threshold_gradient(
     return labels.reshape(smoothed_gradient.shape)
 
 
-def strip_dimensions(array:np.ndarray):
+def strip_dimensions(array: np.ndarray):
     data = array.copy()
     while data.ndim > 2:
-        assert data.shape[0] == 1, f'Unexpected multidimensional data! {data.shape}'
+        assert (
+            data.shape[0] == 1
+        ), f"Unexpected multidimensional data! {data.shape}"
         data = data[0]
     return data
+
 
 def get_2d_gradient(xy):
     gx, gy = np.gradient(xy)
