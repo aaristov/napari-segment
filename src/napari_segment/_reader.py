@@ -102,7 +102,7 @@ def read_zarr(path):
 
 
 def read_nd2(path):
-    print(f"opening {path}")
+    print(f"reading {path}")
     data = nd2.ND2File(path)
     print(data.sizes)
     ddata = data.to_dask()
@@ -116,7 +116,10 @@ def read_nd2(path):
     return [
         (
             ddata,
-            {"channel_axis": channel_axis},
+            {
+                "channel_axis": channel_axis,
+                "metadata": {"sizes": data.sizes, "path": path},
+            },
             # dict(
             #     channel_axis=channel_axis,
             #     name=[ch.channel.name for ch in data.metadata.channels],
