@@ -26,7 +26,7 @@ contributions:
   readers:
     - command: napari-segment.get_reader
       accepts_directories: True
-      filename_patterns: ['*.npy', '*.nd2', '*.zarr']
+      filename_patterns: ['*.npy', '*.nd2', '*.zarr', '*.tif']
   writers:
     - command: napari-segment.write_multiple
       layer_types: ['image*','labels*']

@@ -11,6 +11,7 @@ import os
 import dask
 import nd2
 import numpy as np
+import tifffile as tf
 
 
 def napari_get_reader(path):
@@ -40,11 +41,32 @@ def napari_get_reader(path):
     if path.endswith(".zarr"):
         return read_zarr
 
+    if path.endswith(".tif"):
+        return read_tif
+
     # otherwise we return the *function* that can read ``path``.
     if path.endswith(".npy"):
         return reader_function
 
     return None
+
+
+def read_tif(path):
+    data = tf.TiffFile(path)
+    arr = data.asarray()
+    channel_axis = (
+        arr.shape.index(data.imagej_metadata["channels"])
+        if data.is_imagej
+        else None
+    )
+
+    return [
+        (
+            arr,
+            {"channel_axis": channel_axis, "metadata": {"path": path}},
+            "image",
+        )
+    ]
 
 
 def read_zarr(path):
