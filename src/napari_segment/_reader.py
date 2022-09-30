@@ -126,6 +126,11 @@ def read_zarr(path):
 def read_nd2(path):
     print(f"reading {path}")
     data = nd2.ND2File(path)
+    try:
+        pixel_size_um = data.metadata.channels[0].volume.axesCalibration[0]
+    except Exception as e:
+        print(f'Pixel information unavailable: {e}')
+        pixel_size_um = 1
     print(data.sizes)
     ddata = data.to_dask()
     # colormap = ["gray", "green"]
@@ -140,7 +145,11 @@ def read_nd2(path):
             ddata,
             {
                 "channel_axis": channel_axis,
-                "metadata": {"sizes": data.sizes, "path": path},
+                "metadata": {
+                    "sizes": data.sizes, 
+                    "path": path, 
+                    "pixel_size_um": pixel_size_um
+                },
             },
             # dict(
             #     channel_axis=channel_axis,
