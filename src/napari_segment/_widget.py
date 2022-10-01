@@ -31,6 +31,27 @@ from skimage.measure import regionprops
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from threading import Thread
+import logging
+from importlib.metadata import PackageNotFoundError, version
+
+try:
+    __version__ = version("napari-segment")
+except PackageNotFoundError:
+    # package is not installed
+    __version__ = "Unknown"
+
+logging.basicConfig(
+    level=logging.DEBUG, format="%(asctime)s %(levelname)s : %(message)s"
+)
+logger = logging.getLogger("napari_segment.widget")
+
+formatter = logging.Formatter(
+    "%(asctime)s - %(name)s - %(levelname)s : %(message)s"
+)
+ff = logging.FileHandler("napari-segment.log")
+ff.setFormatter(formatter)
+logger.addHandler(ff)
+
 
 class ExampleQWidget(q.QWidget):
     # your QWidget.__init__ can optionally request the napari viewer instance
@@ -145,9 +166,9 @@ class ExampleQWidget(q.QWidget):
         self.max_diam.changed.connect(self.update_out)
         self.max_ecc.changed.connect(self.update_out)
         self.btn.clicked.connect(self.save_params)
+        logger.debug("Initialization finished.")
 
-        if self.input.current_choice:
-            print("start")
+        if (choice := self.input.current_choice):
             self.restore_params()
             self.preprocess()
 
@@ -164,25 +185,33 @@ class ExampleQWidget(q.QWidget):
         )
 
     def preprocess(self):
+        logger.debug(f"start preprocessing {self.input.current_choice}")
         self.binning = self.binning_widget.value
         try:
             self.data = self.viewer.layers[self.input.current_choice].data[
                 ..., :: self.binning, :: self.binning
             ]
+            logger.debug(f"data after binning: {self.data}")
+
         except KeyError:
             return
         
         try:
             self.pixel_size = self.viewer.layers[self.input.current_choice].metadata["pixel_size_um"]
             self.unit = "um"
+
         except KeyError:
             self.pixel_size = 1
             self.unit = "px"
         
+        logger.debug(f"pixel size: {self.pixel_size} {self.unit}")
+
         self.ax[1].set_title(f"{self.diams_title}, {self.unit}")
         
         self.scale = np.ones((len(self.data.shape),))
         self.scale[-2:] = self.binning
+        logger.debug(f'Computed scale for napari {self.scale}')
+
         if isinstance(self.data, np.ndarray):
             chunksize = np.ones(len(self.data.shape))
             chunksize[-2:] = self.data.shape[-2:]  # xy full size
@@ -191,7 +220,10 @@ class ExampleQWidget(q.QWidget):
             )
         else:
             self.ddata = self.data.astype("f")
+        
+        logger.debug(f'Dask array: {self.ddata}')
 
+        logger.debug(f'Processing data with {self.use.value}')
         # show_info(self.use.value)
         if self.use.value == self.Choices.GRAD.value:
             self.smooth_gradient = self.ddata.map_blocks(
@@ -210,6 +242,8 @@ class ExampleQWidget(q.QWidget):
             )
         else:
             self.smooth_gradient = np.zeros_like(self.ddata)
+            logger.error(f"""Filter `{self.use.value}` not understood!
+                    Expected {[v.value for v in self.Choices]}""")
             raise (
                 ValueError(
                     f"""Filter `{self.use.value}` not understood!
@@ -218,18 +252,24 @@ class ExampleQWidget(q.QWidget):
             )
 
         if not (name := "Preprocessing") in self.viewer.layers:
+            logger.debug(f'No Preprocessing layer found, adding one')
             self.viewer.add_image(
                 data=self.smooth_gradient,
                 **{"name": name, "scale": self.scale},
             )
         else:
+            logger.debug(f'Updating Preprocessing layer with {self.smooth_gradient}')
             self.viewer.layers[name].data = self.smooth_gradient
             self.viewer.layers[name].scale = self.scale
+        
+        logger.debug(f'Preprocessing finished, sending {self.smooth_gradient} to thresholding')
         self.threshold()
 
     def threshold(self):
+        logger.debug('Start thresholding step')
         if not self.input.current_choice:
             return
+        logger.debug(f'Thresholding with the thr={self.thr.value} and erode={self.erode.value}')
         self.labels = self.smooth_gradient.map_blocks(
             partial(
                 threshold_gradient, thr=self.thr.value, erode=self.erode.value
@@ -237,23 +277,31 @@ class ExampleQWidget(q.QWidget):
             dtype=np.int32,
         )
         if not (name := "Detections") in self.viewer.layers:
+            logger.debug(f'No Detections layer found, adding one')
             self.viewer.add_labels(
                 data=self.labels,
                 opacity=0.3,
                 **{"name": name, "scale": self.scale},
             )
         else:
+            logger.debug(f'Updating Detections layer with {self.labels}')
             self.viewer.layers[name].data = self.labels
             self.viewer.layers[name].scale = self.scale
-            self.viewer.layers[name].contour = 5
+            self.viewer.layers[name].contour = 8 / self.binning
+        
+        logger.debug(f'Thresholding succesful. Sending labels {self.labels} to filtering')
         self.update_out()
 
     def update_out(self):
 
         if not self.input.current_choice:
             return
-
+        logger.debug(f'Start filtering')
         try:
+            logger.debug(f"""Filtering labels by  ({self.min_diam.value / self.binning}
+             < size[px] < {self.max_diam.value / self.binning}) 
+             and eccentricity > {self.max_ecc.value}""")
+
             selected_labels = dask.array.map_blocks(
                 filter_labels,
                 self.labels,
@@ -264,12 +312,16 @@ class ExampleQWidget(q.QWidget):
             )
 
             if not (name := "selected labels") in self.viewer.layers:
+                logger.debug(f'No selected labels layer found, adding one')
+
                 self.viewer.add_labels(
                     data=selected_labels,
                     opacity=0.5,
                     **{"name": name, "scale": self.scale},
                 )
             else:
+                logger.debug(f'Updating selected labels layer with {selected_labels}')
+
                 self.viewer.layers[name].scale = self.scale
                 self.viewer.layers[name].data = selected_labels
             # self.save_params()
