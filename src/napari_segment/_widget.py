@@ -57,7 +57,7 @@ ff.setFormatter(formatter)
 logger.addHandler(ff)
 
 
-class ExampleQWidget(q.QWidget):
+class SegmentStack(q.QWidget):
     # your QWidget.__init__ can optionally request the napari viewer instance
     # in one of two ways:
     # 1. use a parameter called `napari_viewer`, as done here
@@ -327,12 +327,14 @@ class ExampleQWidget(q.QWidget):
                 opacity=0.3,
                 **{"name": name, "scale": self.scale},
             )
-            self.viewer.layers[name].contour = 8 // self.binning
 
         else:
             logger.debug(f'Updating Detections layer with {self.labels}')
             self.viewer.layers[name].data = self.labels
             self.viewer.layers[name].scale = self.scale
+        
+        self.viewer.layers[name].contour = 8 // self.binning
+        
         
         logger.debug(f'Thresholding succesful. \
             Sending labels {self.labels} to filtering')

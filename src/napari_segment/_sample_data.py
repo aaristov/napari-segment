@@ -12,4 +12,4 @@ import numpy
 
 def make_sample_data():
     """Generates an image"""
-    return numpy.random.rand(512, 512)
+    return [(numpy.random.rand(512, 512),)]
