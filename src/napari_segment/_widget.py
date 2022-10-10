@@ -614,15 +614,16 @@ class SegmentStack(q.QWidget):
                 data = yaml.safe_load(f)
             show_info(f"restoring parameters from {new_name}")
             logger.info(f"restoring parameters from {new_name}")
+            logger.debug(f"Loaded parameters: {data}")
 
         except (UnboundLocalError, UnicodeDecodeError, FileNotFoundError):
             try:
                 with open(ppp := ".latest.params.yaml") as f:
                     data = yaml.safe_load(f)
+                logger.debug(f"Loaded parameters: {data}")
                 show_info(f"restoring parameters from {ppp}")
             except FileNotFoundError:
                 logger.debug("No latest params found")
-        logger.debug(f"Loaded parameters: {data}")
         try:
             self.binning_widget.value = data["binning"]
             self.use.value = data["use"]
