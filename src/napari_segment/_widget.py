@@ -621,7 +621,7 @@ class SegmentStack(q.QWidget):
                     data = yaml.safe_load(f)
                 show_info(f"restoring parameters from {ppp}")
             except FileNotFoundError:
-                return
+                logger.debug("No latest params found")
         logger.debug(f"Loaded parameters: {data}")
         try:
             self.binning_widget.value = data["binning"]
