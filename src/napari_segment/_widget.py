@@ -84,15 +84,14 @@ class SegmentStack(q.QWidget):
             choices=self.update_labels(),
         )
 
-        self.btn_make_manual_labels = w.PushButton(text="Clone for manual correction")
+        self.btn_make_manual_labels = w.PushButton(
+            text="Clone for manual correction"
+        )
         self.btn_make_manual_labels.clicked.connect(self.make_manual_layer)
 
         self.stat_layer_selector_container = w.Container(
-            widgets=[
-                self.stat_layer_selector,
-                self.btn_make_manual_labels
-            ],
-            layout="horizontal"
+            widgets=[self.stat_layer_selector, self.btn_make_manual_labels],
+            layout="horizontal",
         )
 
         self.binning_widget = w.RadioButtons(
@@ -137,22 +136,16 @@ class SegmentStack(q.QWidget):
 
         self.check_auto_plot = w.CheckBox(label="Auto Update")
         self.check_auto_plot.changed.connect(
-            partial(
-                self.plot_stats, force=True
-            )
+            partial(self.plot_stats, force=True)
         )
 
         self.btn_update_stats = w.PushButton(text="Update plots")
         self.btn_update_stats.clicked.connect(self.plot_stats)
 
         self.update_plot_container = w.Container(
-            widgets=[
-                self.btn_update_stats,
-                self.check_auto_plot
-            ],
-            layout='horizontal'
+            widgets=[self.btn_update_stats, self.check_auto_plot],
+            layout="horizontal",
         )
-
 
         self.pixel_size = 1
         self.pixel_unit = "px"
@@ -232,29 +225,29 @@ class SegmentStack(q.QWidget):
 
     def update_labels(self):
         return [
-                layer.name
-                for layer in self.viewer.layers
-                if isinstance(layer, Labels)
-            ]
-    
+            layer.name
+            for layer in self.viewer.layers
+            if isinstance(layer, Labels)
+        ]
+
     def update_images(self):
         return [
-                layer.name
-                for layer in self.viewer.layers
-                if isinstance(layer, Image)
-            ]
+            layer.name
+            for layer in self.viewer.layers
+            if isinstance(layer, Image)
+        ]
 
     def make_manual_layer(self):
         try:
             clone = self.selected_labels.compute()
-            layer = self.viewer.add_labels(
-                data=clone, 
-                name=(manual_layer_name := "Manual Labels"),
-                scale=self.scale, 
+            self.viewer.add_labels(
+                data=clone,
+                name="Manual Labels",
+                scale=self.scale,
                 metadata={
                     "binning": self.binning,
-                    "source": self.viewer.layers["selected labels"]
-                }
+                    "source": self.viewer.layers["selected labels"],
+                },
             )
             self.stat_layer_selector.choices = self.update_labels()[::-1]
 
@@ -507,17 +500,12 @@ class SegmentStack(q.QWidget):
         self.pixel_unit = str(self.pixel_unit_widget.value)
         self.ax[1].set_title(f"{self.diams_title}, {self.pixel_unit}")
 
-        data = self.viewer.layers[
-                self.stat_layer_selector.current_choice
-        ].data
+        data = self.viewer.layers[self.stat_layer_selector.current_choice].data
 
         if isinstance(data, dask.array.Array):
             data = data.compute()
 
-        props = [
-            regionprops(label_image=img)
-            for img in data
-        ]
+        props = [regionprops(label_image=img) for img in data]
         num_regions_per_frame = [len(p) for p in props]
         area_ = [
             [
@@ -692,106 +680,6 @@ def example_magic_widget(img_layer: "napari.layers.Image"):
 
 def save_values(val):
     print(f"Saving {val}")
-
-
-# Uses the `autogenerate: true` flag in the plugin manifest
-# to indicate it should be wrapped as a magicgui to autogenerate
-# a widget.
-@magic_factory(
-    auto_call=True,
-    bin={
-        "label": "binning",
-        "widget_type": "ComboBox",
-        "choices": [1, 2, 4, 8, 16],
-    },
-    thr={
-        "label": "Threshold",
-        "widget_type": "FloatSlider",
-        "min": 0.1,
-        "max": 0.9,
-    },
-    erode={"widget_type": "Slider", "min": 1, "max": 10},
-    min_diam={"widget_type": "Slider", "min": 100, "max": 1000},
-    max_diam={"widget_type": "Slider", "min": 150, "max": 2000},
-    max_ecc={
-        "label": "Eccentricity",
-        "widget_type": "FloatSlider",
-        "min": 0.0,
-        "max": 1.0,
-    },
-)
-def segment_organoid(
-    BF_layer: "napari.layers.Image",
-    bin: int = 1,
-    use_gradient=True,
-    smooth=10,
-    thr: float = 0.3,
-    erode: int = 10,
-    min_diam=150,
-    max_diam=550,
-    max_ecc=0.7,
-    show_detections=True,
-) -> napari.types.LayerDataTuple:
-    # frame = napari.current_viewer().cursor.position[0]
-
-    ddata = BF_layer.data[..., ::bin, ::bin]
-    if isinstance(ddata, np.ndarray):
-        chunksize = np.ones(ddata.ndims)
-        chunksize[-2:] = ddata.shape[-2:]  # xy full size
-        ddata = dask.array.from_array(ddata, chunksize=chunksize)
-    smooth_gradient = (
-        ddata.map_blocks(
-            partial(get_gradient, smooth=smooth), dtype=ddata.dtype
-        )
-        if use_gradient
-        else ddata.map_blocks(
-            lambda d: 1
-            - (a := (s := gaussian_filter(d, smooth)) - s.min()) / a.max(),
-            dtype=ddata.dtype,
-        )
-    )
-    labels = smooth_gradient.map_blocks(
-        partial(threshold_gradient, thr=thr, erode=erode),
-        dtype=ddata.dtype,
-    )
-    try:
-        selected_labels = dask.array.map_blocks(
-            filter_labels,
-            labels,
-            min_diam / bin,
-            max_diam / bin,
-            max_ecc,
-            dtype=ddata.dtype,
-        )
-        scale = np.ones((len(labels.shape),))
-        scale[-2:] = bin
-        kwargs = {"scale": scale}
-        return [
-            (
-                smooth_gradient,
-                {"name": "Gradient", "visible": show_detections, **kwargs},
-                "image",
-            ),
-            (
-                labels,
-                {"name": "Detections", "visible": show_detections, **kwargs},
-                "labels",
-            ),
-            (selected_labels, {"name": "selected labels", **kwargs}, "labels"),
-        ]
-    except TypeError:
-        return [
-            (
-                labels,
-                {
-                    "name": "Detections",
-                    "visible": True,
-                    "scale": scale,
-                    **kwargs,
-                },
-                "labels",
-            ),
-        ]
 
 
 def filter_labels(labels, min_diam=50, max_diam=150, max_ecc=0.2):
