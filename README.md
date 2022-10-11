@@ -21,7 +21,7 @@ This [napari] plugin was generated with [Cookiecutter] using [@napari]'s [cookie
 ## Usage for segmentation
 
 1. Drag your nd2 file into napari
-2. Lauch Plugins -> napari-segment: Segment prognoid
+2. Lauch Plugins -> napari-segment: Segment organoid
 3. Select the brightfield channel
 4. The data is lazily loaded from nd2 dataset and dynamically segmented in the viewer. 
 5. Theshold and erode parameters allow you to adjust segmentation -> they all will appear in the Detections layer
