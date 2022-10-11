@@ -16,14 +16,14 @@ This [napari] plugin was generated with [Cookiecutter] using [@napari]'s [cookie
 
 ## Installation
 
-```pip install git+https://github.com/aaristov/napari-segment.git```
+```pip install napari-segment```
 
 ## Usage for segmentation
 
 1. Drag your nd2 file into napari
 2. Lauch Plugins -> napari-segment: Segment prognoid
 3. Select the brightfield channel
-4. The data is lazily loaded from nd2 dataset and dynamically segmented in the viewer. 
+4. The data is lazily loaded from nd2 dataset and dynamically segmented in the viewer.
 5. Theshold and erode parameters allow you to adjust segmentation -> they all will appear in the Detections layer
 6. Min/max diameter and eccentricity allow you to filter out unwanted regions -> the good regions will appear in the "selected labels" layer.
 7. You can deactivate the Detection layer with a checkbox.
