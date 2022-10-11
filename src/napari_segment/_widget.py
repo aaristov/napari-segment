@@ -520,9 +520,9 @@ class SegmentStack(q.QWidget):
             data=area,
             columns=["frame", (area_col := f"area [{self.pixel_unit}$^2$]")],
         )
-        self.props_df.loc[:, (diam_col := f"diameter [{self.pixel_unit}]")] = (
-            np.sqrt(self.props_df[area_col]) * 2 / np.pi
-        )
+        self.props_df.loc[
+            :, (diam_col := f"diameter [{self.pixel_unit}]")
+        ] = 2 * np.sqrt(self.props_df[area_col] / np.pi)
 
         eccs_ = [
             [(prop.eccentricity) for prop in props_per_frame]
@@ -614,7 +614,7 @@ class SegmentStack(q.QWidget):
                 data = yaml.safe_load(f)
             show_info(f"restoring parameters from {new_name}")
             logger.info(f"restoring parameters from {new_name}")
-            logger.debug(f"Loaded parameters: {data}")
+            logger.debug(f"Loaded : {data}")
 
         except (UnboundLocalError, UnicodeDecodeError, FileNotFoundError):
             try:
