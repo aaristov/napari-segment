@@ -5,10 +5,7 @@ It implements the Reader specification, but your plugin may choose to
 implement multiple readers or even other plugin contributions. see:
 https://napari.org/plugins/stable/guides.html#readers
 """
-import json
-import os
 
-import dask
 import nd2
 import numpy as np
 import tifffile as tf
@@ -38,9 +35,6 @@ def napari_get_reader(path):
     if path.endswith(".nd2"):
         return read_nd2
 
-    if path.endswith(".zarr"):
-        return read_zarr
-
     if path.endswith(".tif"):
         return read_tif
 
@@ -69,67 +63,13 @@ def read_tif(path):
     ]
 
 
-def read_zarr(path):
-    print(f"read_zarr {path}")
-
-    try:
-        attrs = json.load(open(os.path.join(path, ".zattrs")))
-        info = attrs["multiscales"]["multiscales"][0]
-    except Exception as e:
-        raise e
-
-    dataset_paths = [os.path.join(path, d["path"]) for d in info["datasets"]]
-    datasets = [dask.array.from_zarr(p) for p in dataset_paths]
-
-    try:
-        channel_axis = info["channel_axis"]
-        print(f"found channel axis {channel_axis}")
-    except KeyError:
-        channel_axis = None
-
-    except Exception as e:
-        raise e
-
-    try:
-        contrast_limits = info["lut"]
-    except KeyError:
-        contrast_limits = None
-
-    try:
-        colormap = info["colormap"]
-    except KeyError:
-        colormap = None
-
-    try:
-        name = info["name"]
-    except KeyError:
-        print("name not found")
-        name = [os.path.basename(path)] * datasets[0].shape[channel_axis]
-    except Exception as e:
-        print("name exception", e.args)
-        name = os.path.basename(path)
-
-    return [
-        (
-            datasets,
-            {
-                "channel_axis": channel_axis,
-                "colormap": colormap,
-                "contrast_limits": contrast_limits,
-                "name": name,
-            },
-            "image",
-        )
-    ]
-
-
-def read_nd2(path):
+def read_nd2(path, **kwargs):
     print(f"reading {path}")
     data = nd2.ND2File(path)
     try:
         pixel_size_um = data.metadata.channels[0].volume.axesCalibration[0]
     except Exception as e:
-        print(f'Pixel information unavailable: {e}')
+        print(f"Pixel information unavailable: {e}")
         pixel_size_um = 1
     print(data.sizes)
     ddata = data.to_dask()
@@ -146,18 +86,12 @@ def read_nd2(path):
             {
                 "channel_axis": channel_axis,
                 "metadata": {
-                    "sizes": data.sizes, 
-                    "path": path, 
-                    "pixel_size_um": pixel_size_um
+                    "sizes": data.sizes,
+                    "path": path,
+                    "pixel_size_um": pixel_size_um,
                 },
+                **kwargs,
             },
-            # dict(
-            #     channel_axis=channel_axis,
-            #     name=[ch.channel.name for ch in data.metadata.channels],
-            # colormap=colormap,
-            # scale=data.metadata.channels[0].volume.axesCalibration[:]
-            # contrast_limits=[(8500, 35000), (150, 20000)],
-            # ),
             "image",
         )
     ]
