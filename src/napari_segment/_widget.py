@@ -135,9 +135,7 @@ class SegmentStack(q.QWidget):
         self.btn_save_csv = q.QPushButton("Save csv!")
 
         self.check_auto_plot = w.CheckBox(label="Auto Update")
-        self.check_auto_plot.changed.connect(
-            partial(self.plot_stats, force=True)
-        )
+        self.check_auto_plot.changed.connect(self.plot_stats)
 
         self.btn_update_stats = w.PushButton(text="Update plots")
         self.btn_update_stats.clicked.connect(self.plot_stats)
