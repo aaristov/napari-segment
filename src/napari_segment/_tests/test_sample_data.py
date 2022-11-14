@@ -3,13 +3,8 @@ import dask.array as da
 from napari_segment._sample_data import make_late_aggregate
 
 
-def test_early_aggregate():
-    res = make_late_aggregate()
-    assert isinstance(res, tuple)
-    assert isinstance(res[0], da.Array)
-
-
 def test_late_agregate():
-    res = make_late_aggregate()
-    assert isinstance(res, tuple)
-    assert isinstance(res[0], da.Array)
+    for res in (make_late_aggregate(), make_late_aggregate()):
+        assert isinstance(res, list)
+        assert len(res[0]) == 3
+        assert isinstance(res[0][0], da.Array)
