@@ -31,61 +31,7 @@ This [napari] plugin was generated with [Cookiecutter] using [@napari]'s [cookie
 
 ![image](https://user-images.githubusercontent.com/11408456/176637480-aec8f6f7-d1fe-44dc-b6cd-ccea675c0dc9.png)
 
-## Usage for multicale zarr preview
-1. Drag and drop the folder with mutiscale zarr dataset.
-2. The plugin will look for the napari attributes in the .zattr file and render the stack accordingly. See the example below for 4D dataset:
-```json
-{
-    "multiscales": {
-        "multiscales": [
-            {
-                "channel_axis": 1,
-                "colormap": [
-                    "gray",
-                    "green",
-                    "blue"
-                ],
-                "datasets": [
-                    {
-                        "path": "0"
-                    },
-                    {
-                        "path": "1"
-                    },
-                    {
-                        "path": "2"
-                    },
-                    {
-                        "path": "3"
-                    }
-                ],
-                "lut": [
-                    [
-                        1000,
-                        30000
-                    ],
-                    [
-                        440,
-                        600
-                    ],
-                    [
-                        0,
-                        501
-                    ]
-                ],
-                "name": [
-                    "BF",
-                    "TRITC",
-                    "mask"
-                ],
-                "title": "BF_TRITC_aligned.zarr",
-                "type": "nd2",
-                "version": "0.1"
-            }
-        ]
-    }
-}
-```
+
 
 
 ## Contributing
