@@ -741,13 +741,7 @@ def threshold_gradient(
 
 
 def strip_dimensions(array: np.ndarray):
-    data = array.copy()
-    while data.ndim > 2:
-        assert (
-            data.shape[0] == 1
-        ), f"Unexpected multidimensional data! {data.shape}"
-        data = data[0]
-    return data
+    return np.squeeze(array)
 
 
 def get_2d_gradient(xy):
