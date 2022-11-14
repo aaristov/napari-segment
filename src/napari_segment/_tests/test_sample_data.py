@@ -1,7 +1,15 @@
-# from napari_segment import make_sample_data
+import dask.array as da
 
-# add your tests here...
+from napari_segment._sample_data import make_late_aggregate
 
 
-def test_something():
-    pass
+def test_early_aggregate():
+    res = make_late_aggregate()
+    assert isinstance(res, tuple)
+    assert isinstance(res[0], da.Array)
+
+
+def test_late_agregate():
+    res = make_late_aggregate()
+    assert isinstance(res, tuple)
+    assert isinstance(res[0], da.Array)
