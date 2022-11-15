@@ -284,15 +284,22 @@ class SegmentStack(q.QWidget):
         self.move_step(xdata[ind])
 
     def _invert(self, data2D):
-        return 1 - norm01(gaussian_filter(data2D, self.smooth.value))
+        logger.debug(
+            f"Making inverted intensity with sigma {self.smooth_widget.value}"
+        )
+        return 1 - norm01(gaussian_filter(data2D, self.smooth_widget.value))
 
     def _grad(self, data2D):
-        return get_gradient(data2D, smooth=self.smooth.value)
+        logger.debug(f"Making gradient with sigma {self.smooth_widget.value}")
+        return get_gradient(data2D, smooth=self.smooth_widget.value)
 
     def _gdif(self, data2D):
-        return gaussian_filter(data2D, self.smooth.value) - gaussian_filter(
-            data2D, self.smooth.value + 2
+        logger.debug(
+            f"Making Gauss difference with sigma {self.smooth_widget.value}"
         )
+        return gaussian_filter(
+            data2D, self.smooth_widget.value
+        ) - gaussian_filter(data2D, self.smooth_widget.value + 2)
 
     def set_pixel_size(self, value):
         self.pixel_size = value
