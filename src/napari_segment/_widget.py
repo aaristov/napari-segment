@@ -599,8 +599,8 @@ class SegmentStack(q.QWidget):
             "max_ecc": self.max_ecc.value,
             "pixel_size": self.pixel_size,
             "pixel_unit": self.pixel_unit,
-            
-        } + kwargs
+            **kwargs
+        }
         try:
 
             dir = os.path.dirname(self.path)
