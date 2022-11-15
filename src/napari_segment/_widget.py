@@ -11,6 +11,7 @@ import os
 from enum import Enum
 from functools import partial, reduce
 from importlib.metadata import PackageNotFoundError, version
+from typing import List
 
 import dask
 import magicgui.widgets as w
@@ -73,7 +74,7 @@ class SegmentStack(q.QWidget):
         self.viewer = napari_viewer
 
         self.input = w.ComboBox(
-            label="BF data",
+            label="Input",
             annotation=Image,
             choices=self.update_images(),
         )
@@ -95,17 +96,19 @@ class SegmentStack(q.QWidget):
         )
 
         self.binning_widget = w.RadioButtons(
-            label="binning",
+            label="Binning",
             choices=[2**n for n in range(4)],
             value=4,
             orientation="horizontal",
         )
 
-        self.thr = w.FloatSlider(
-            label="Threshold", min=0.1, max=0.9, value=0.4
+        self.threshold_widget = w.FloatSlider(
+            label="Threshold", min=0.0, max=1.0, value=0.4
         )
 
-        self.erode = w.SpinBox(label="erode", min=0, max=10, value=0)
+        self.erode_widget = w.SpinBox(
+            label="Erode (px)", min=0, max=10, value=0
+        )
 
         self.use = w.RadioButtons(
             label="Use",
@@ -115,7 +118,9 @@ class SegmentStack(q.QWidget):
             allow_multiple=True,
         )
 
-        self.smooth_widget = w.SpinBox(label="smooth", min=0, max=10, value=2)
+        self.smooth_widget = w.SpinBox(
+            label="Smooth sigma (px)", min=0, max=10, value=2
+        )
 
         self.min_diam = w.Slider(
             label="Min_diameter",
@@ -152,7 +157,7 @@ class SegmentStack(q.QWidget):
             value=self.pixel_size,
         )  # bind=self.set_pixel_size)
         self.pixel_unit_widget = w.LineEdit(
-            label="unit", value=self.pixel_unit
+            label="Unit", value=self.pixel_unit
         )  # , bind=self.set_pixel_unit)
         self.pixel_block = w.Container(
             widgets=[self.pixel_size_widget, self.pixel_unit_widget],
@@ -177,26 +182,27 @@ class SegmentStack(q.QWidget):
             range(10), [0] * 10, "o", picker=True, pickradius=5
         )
 
-        self.container = w.Container(
-            label="Container",
-            widgets=[
-                self.input,
-                w.Label(label="Prepocessing"),
-                self.binning_widget,
-                self.use,
-                w.Label(label="Detection"),
-                self.smooth_widget,
-                self.thr,
-                self.erode,
-                w.Label(label="Filters"),
-                self.min_diam,
-                self.max_diam,
-                self.max_ecc,
-            ],
+        self.setLayout(q.QVBoxLayout())
+
+        pre_block = make_group(
+            title="Preprocessing",
+            widgets=[self.binning_widget, self.use, self.smooth_widget],
         )
 
-        self.setLayout(q.QVBoxLayout())
-        self.layout().addWidget(self.container.native)
+        det_block = make_group(
+            title="Thresholding",
+            widgets=[self.threshold_widget, self.erode_widget],
+        )
+
+        fil_block = make_group(
+            title="Filtering",
+            widgets=[self.min_diam, self.max_diam, self.max_ecc],
+        )
+
+        self.layout().addWidget(w.Container(widgets=[self.input]).native)
+        self.layout().addWidget(pre_block)
+        self.layout().addWidget(det_block)
+        self.layout().addWidget(fil_block)
         self.layout().addWidget(self.btn_save_params)
         self.layout().addWidget(self.update_plot_container.native)
         self.layout().addWidget(self.stat_layer_selector_container.native)
@@ -415,12 +421,14 @@ class SegmentStack(q.QWidget):
         if not self.input.current_choice:
             return
         logger.debug(
-            f"Thresholding with the thr={self.thr.value} \
-            and erode={self.erode.value}"
+            f"Thresholding with the thr={self.threshold_widget.value} \
+            and erode={self.erode_widget.value}"
         )
         self.labels = self.smooth_gradient.map_blocks(
             partial(
-                threshold_gradient, thr=self.thr.value, erode=self.erode.value
+                threshold_gradient,
+                thr=self.threshold_widget.value,
+                erode=self.erode_widget.value,
             ),
             dtype=np.int32,
         )
@@ -573,8 +581,8 @@ class SegmentStack(q.QWidget):
             "binning": self.binning,
             "use": self.use.value,
             "smooth": self.smooth_widget.value,
-            "thr": self.thr.value,
-            "erode": self.erode.value,
+            "thr": self.threshold_widget.value,
+            "erode": self.erode_widget.value,
             "min_diameter": self.min_diam.value,
             "max_diameter": self.max_diam.value,
             "max_ecc": self.max_ecc.value,
@@ -633,8 +641,8 @@ class SegmentStack(q.QWidget):
             self.binning_widget.value = data["binning"]
             self.use.value = data["use"]
             self.smooth_widget.value = data["smooth"]
-            self.thr.value = data["thr"]
-            self.erode.value = data["erode"]
+            self.threshold_widget.value = data["thr"]
+            self.erode_widget.value = data["erode"]
             self.min_diam.value = data["min_diameter"]
             self.max_diam.value = data["max_diameter"]
             self.max_ecc.value = data["max_ecc"]
@@ -645,8 +653,8 @@ class SegmentStack(q.QWidget):
             logger.error(f"Restore settings failed, {e}")
 
         self.binning_widget.changed.connect(self.preprocess)
-        self.thr.changed.connect(self.threshold)
-        self.erode.changed.connect(self.threshold)
+        self.threshold_widget.changed.connect(self.threshold)
+        self.erode_widget.changed.connect(self.threshold)
         self.use.changed.connect(self.preprocess)
         self.smooth_widget.changed.connect(self.preprocess)
         self.min_diam.changed.connect(self.update_out)
@@ -670,6 +678,19 @@ class SegmentStack(q.QWidget):
                 "No new data layers, probably added pipeline \
                     layers triggered this reset"
             )
+
+
+def make_group(
+    title: str = "Group",
+    widgets: List[w.Widget] = [],
+    layout: str = "vertical",
+):
+    group = q.QGroupBox(title=title)
+    layout = q.QVBoxLayout()
+    cnt = w.Container(widgets=widgets, layout=layout)
+    layout.addWidget(cnt.native)
+    group.setLayout(layout)
+    return group
 
 
 def norm01(data):
