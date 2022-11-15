@@ -40,10 +40,10 @@ contributions:
   sample_data:
     - command: napari-segment.make_late_aggregate
       display_name: Old aggregate
-      key: unique_id.0
+      key: D3_D4
     - command: napari-segment.make_early_aggregate
       display_name: Early aggregate
-      key: unique_id.1
+      key: D3_D1
   widgets:
     - command: napari-segment.make_qwidget
       display_name: Segment multipos
