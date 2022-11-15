@@ -11,9 +11,12 @@ contributions:
     - id: napari-segment.write_single_image
       python_name: napari_segment._writer:write_single_image
       title: Save image data with Segment organoid
-    - id: napari-segment.make_sample_data
-      python_name: napari_segment._sample_data:make_sample_data
-      title: Load sample data from Segment organoid
+    - id: napari-segment.make_early_aggregate
+      python_name: napari_segment._sample_data:make_early_aggregate
+      title: Load sample data
+    - id: napari-segment.make_late_aggregate
+      python_name: napari_segment._sample_data:make_late_aggregate
+      title: Load sample data
     - id: napari-segment.make_qwidget
       python_name: napari_segment._widget:SegmentStack
       title: Segment nd2 stack with multiple positions
@@ -26,7 +29,7 @@ contributions:
   readers:
     - command: napari-segment.get_reader
       accepts_directories: True
-      filename_patterns: ['*.npy', '*.nd2', '*.zarr', '*.tif']
+      filename_patterns: ['*.npy', '*.nd2', '*.tif']
   writers:
     - command: napari-segment.write_multiple
       layer_types: ['image*','labels*']
@@ -35,9 +38,12 @@ contributions:
       layer_types: ['image']
       filename_extensions: ['.npy']
   sample_data:
-    - command: napari-segment.make_sample_data
-      display_name: Segment organoid
-      key: unique_id.1
+    - command: napari-segment.make_late_aggregate
+      display_name: Old aggregate
+      key: D3_D4
+    - command: napari-segment.make_early_aggregate
+      display_name: Early aggregate
+      key: D3_D1
   widgets:
     - command: napari-segment.make_qwidget
       display_name: Segment multipos
