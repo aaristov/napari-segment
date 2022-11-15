@@ -6,7 +6,6 @@ see: https://napari.org/plugins/stable/guides.html#widgets
 
 Replace code below according to your needs.
 """
-from PIL import Image as PilImage
 import logging
 import os
 from enum import Enum
@@ -89,6 +88,7 @@ class SegmentStack(q.QWidget):
         self.btn_make_manual_labels = w.PushButton(
             text="Clone for manual correction"
         )
+
         self.btn_make_manual_labels.clicked.connect(self.make_manual_layer)
 
         self.stat_layer_selector_container = w.Container(
@@ -245,22 +245,19 @@ class SegmentStack(q.QWidget):
     def make_manual_layer(self):
         try:
             clone = self.selected_labels.compute()
-            rescale = np.array(self.scale) * np.array(clone.shape)
-            orig_res_clone = np.asarray(
-                PilImage.fromarray(clone).resize(self.raw_data.shape)
-            )
+
             self.viewer.add_labels(
-                data=orig_res_clone,
+                data=clone,
                 name="Manual Labels",
                 metadata={
-                    "binning": "no binning",
+                    "binning": self.binning,
                     "source": self.viewer.layers["selected labels"],
                 },
             )
             self.stat_layer_selector.choices = ["Manual Labels"]
             self.viewer.layers["selected labels"].visible = False
+            self.viewer.layers["Detections"].visible = False
             self.plot_stats(force=True)
-
 
         except Exception as e:
             show_error(err := f"Unable to create manual layer: {e}")
@@ -335,9 +332,7 @@ class SegmentStack(q.QWidget):
         self.binning = self.binning_widget.value
         self.raw_data = self.viewer.layers[self.input.current_choice].data
         try:
-            self.data = self.raw_data[
-                ..., :: self.binning, :: self.binning
-            ]
+            self.data = self.raw_data[..., :: self.binning, :: self.binning]
             logger.debug(f"data after binning: {self.data}")
 
         except KeyError:
@@ -583,7 +578,7 @@ class SegmentStack(q.QWidget):
             show_error(f"Error saving csv: {e}")
 
         if self.stat_layer_selector.value == "Manual Labels":
-            out = self.layers["Manual labels"].save(self.path+".labels.tif")
+            out = self.layers["Manual labels"].save(self.path + ".labels.tif")
             show_info(f"Manual labels saved {out}")
             self.save_params(manual_labels=os.path.basename(out))
 
@@ -599,7 +594,7 @@ class SegmentStack(q.QWidget):
             "max_ecc": self.max_ecc.value,
             "pixel_size": self.pixel_size,
             "pixel_unit": self.pixel_unit,
-            **kwargs
+            **kwargs,
         }
         try:
 
