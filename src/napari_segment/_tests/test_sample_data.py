@@ -1,10 +1,7 @@
-import dask.array as da
+def test_late_agregate(make_napari_viewer):
 
-from napari_segment._sample_data import make_late_aggregate
-
-
-def test_late_agregate():
-    for res in (make_late_aggregate(), make_late_aggregate()):
-        assert isinstance(res, list)
-        assert len(res[0]) == 3
-        assert isinstance(res[0][0], da.Array)
+    viewer = make_napari_viewer()
+    viewer.open_sample("napari-segment", "D3_D4")
+    viewer.open_sample("napari-segment", "D3_D1")
+    assert "D3_D4" in viewer.layers
+    assert "D3_D1" in viewer.layers
