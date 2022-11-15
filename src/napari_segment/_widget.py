@@ -115,7 +115,7 @@ class SegmentStack(q.QWidget):
             allow_multiple=True,
         )
 
-        self.smooth = w.SpinBox(label="smooth", min=0, max=10, value=2)
+        self.smooth_widget = w.SpinBox(label="smooth", min=0, max=10, value=2)
 
         self.min_diam = w.Slider(
             label="Min_diameter",
@@ -185,7 +185,7 @@ class SegmentStack(q.QWidget):
                 self.binning_widget,
                 self.use,
                 w.Label(label="Detection"),
-                self.smooth,
+                self.smooth_widget,
                 self.thr,
                 self.erode,
                 w.Label(label="Filters"),
@@ -565,7 +565,7 @@ class SegmentStack(q.QWidget):
         data = {
             "binning": self.binning,
             "use": self.use.value,
-            "smooth": self.smooth.value,
+            "smooth": self.smooth_widget.value,
             "thr": self.thr.value,
             "erode": self.erode.value,
             "min_diameter": self.min_diam.value,
@@ -625,7 +625,7 @@ class SegmentStack(q.QWidget):
         try:
             self.binning_widget.value = data["binning"]
             self.use.value = data["use"]
-            self.smooth.value = data["smooth"]
+            self.smooth_widget.value = data["smooth"]
             self.thr.value = data["thr"]
             self.erode.value = data["erode"]
             self.min_diam.value = data["min_diameter"]
@@ -641,7 +641,7 @@ class SegmentStack(q.QWidget):
         self.thr.changed.connect(self.threshold)
         self.erode.changed.connect(self.threshold)
         self.use.changed.connect(self.preprocess)
-        self.smooth.changed.connect(self.preprocess)
+        self.smooth_widget.changed.connect(self.preprocess)
         self.min_diam.changed.connect(self.update_out)
         self.max_diam.changed.connect(self.update_out)
         self.max_ecc.changed.connect(self.update_out)
