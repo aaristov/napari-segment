@@ -1,33 +1,34 @@
-from napari_segment import ExampleQWidget, example_magic_widget
+import os
+
+import dask.array as da
 import numpy as np
+
+from napari_segment import SegmentStack
+
 
 # make_napari_viewer is a pytest fixture that returns a napari viewer object
 # capsys is a pytest fixture that captures stdout and stderr output streams
-def test_example_q_widget(make_napari_viewer, capsys):
+def test_segment_stack(make_napari_viewer):
     # make viewer and add an image layer using our fixture
     viewer = make_napari_viewer()
-    viewer.add_image(np.random.random((100, 100)))
+    viewer.open_sample("napari-segment", "D3_D4")
 
     # create our widget, passing in the viewer
-    my_widget = ExampleQWidget(viewer)
+    widget = SegmentStack(viewer)
+    assert widget.input.current_choice == "D3_D4"
+    assert os.path.join(".napari-segment", "data", "D3_D4.nd2") in widget.path
+    assert isinstance(widget.ddata, da.Array)
 
-    # call our widget method
-    my_widget._on_click()
+    widget.save_params()
+    assert os.path.exists(widget.path + ".params.yaml")
 
-    # read captured output and check that it's as we expected
-    captured = capsys.readouterr()
-    assert captured.out == "napari has 1 layers\n"
-    
-def test_example_magic_widget(make_napari_viewer, capsys):
-    viewer = make_napari_viewer()
-    layer = viewer.add_image(np.random.random((100, 100)))
+    widget.plot_stats(True)
 
-    # this time, our widget will be a MagicFactory or FunctionGui instance
-    my_widget = example_magic_widget()
+    widget.make_manual_layer()
 
-    # if we "call" this object, it'll execute our function
-    my_widget(viewer.layers[0])
+    assert (mtitle := "Manual Labels") in viewer.layers
+    assert isinstance(viewer.layers[mtitle].data, np.ndarray)
 
     # read captured output and check that it's as we expected
-    captured = capsys.readouterr()
-    assert captured.out == f"you have selected {layer}\n"
+    # captured = capsys.readouterr()
+    # assert captured.out == "napari has 1 layers\n"
