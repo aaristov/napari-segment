@@ -16,7 +16,7 @@ def test_segment_stack(make_napari_viewer):
     # create our widget, passing in the viewer
     widget = SegmentStack(viewer)
     assert widget.input.current_choice == "D3_D4"
-    assert ".napari-segment/data/D3_D4.nd2" in widget.path
+    assert os.path.join(".napari-segment", "data", "D3_D4.nd2") in widget.path
     assert isinstance(widget.ddata, da.Array)
 
     widget.save_params()
