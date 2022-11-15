@@ -10,12 +10,19 @@
 Interactively segment organoids/spheroids/aggregates in brightfield/fluorescence from nd2 multipositional stack.
 ----------------------------------
 
-![image](https://user-images.githubusercontent.com/11408456/201700306-c92c175f-6266-424e-8510-c293ebc28d59.png)
+![image](https://user-images.githubusercontent.com/11408456/201948817-255717a6-5f5c-45a2-ae01-2e0cbb1e29e8.png)
 
 
 ## Installation
 
 ```pip install napari-segment```
+
+or
+
+From napari plugin
+
+![image](https://user-images.githubusercontent.com/11408456/201949692-33f94eaf-ac43-44dd-8c21-e9f9a460c5b2.png)
+
 
 ## Usage for segmentation
 
@@ -28,7 +35,9 @@ Interactively segment organoids/spheroids/aggregates in brightfield/fluorescence
 6. Various preprocessing modes allow segmentation of different objects:
 ![image](https://user-images.githubusercontent.com/11408456/201701809-f16a23ea-d14a-4b38-8b8c-08a113416509.png)
 
-  - Invert: will use the dark shadow around aggregate - best for very old aggregates , out of focus (File / Open Sample / napari-segment / Old aggregate) ![image](https://user-images.githubusercontent.com/11408456/201701950-efd86fae-d85b-471c-bb44-a0e328e26adc.png)
+  - Invert: will use the dark shadow around aggregate - best for very old aggregates , out of focus (File / Open Sample / napari-segment / Old aggregate)
+  
+  ![image](https://user-images.githubusercontent.com/11408456/201701950-efd86fae-d85b-471c-bb44-a0e328e26adc.png)
 
   - Gradient: best for very sharp edges, early aggregates, single cells (File / Open Sample / napari-segment / Early aggregate) 
   
@@ -37,13 +46,15 @@ Interactively segment organoids/spheroids/aggregates in brightfield/fluorescence
   
   - Gauss diff: Fluorescence images
   The result of preprocessing will be shown in the "Preprocessing" layer.
-7. Smooth, Theshold and Erode parameters allow you to adjust the preliminary segmentation -> they all will appear in the "Detections" layer 
+7. Smooth, Theshold and Erode parameters allow you to adjust the preliminary segmentation -> they all will appear in the "Detections" layer as outlines 
 
   ![image](https://user-images.githubusercontent.com/11408456/201703675-cff6bac1-bb2a-4d45-963f-6e6d00309c77.png)
 
-8. Min/max diameter and eccentricity allow you to filter out unwanted regions -> the good regions will appear in the "selected labels" layer.
+8. Min/max diameter and eccentricity allow you to filter out unwanted regions -> the good regions will appear in the "selected labels" layer as filled areas.
 
 ![image](https://user-images.githubusercontent.com/11408456/201703754-2c83a8d6-70c2-444a-8e30-54a39c901cd0.png)
+![image](https://user-images.githubusercontent.com/11408456/201707025-9121f0dc-3939-48f0-ae75-884891be8d66.png)
+
 
 9. Once satisfied, click "Save the params!" - it will automatically create file.nd2.params.yml file, so you can recall how the segmentation was done. Next time you open the same dataset, the parameters will be loaded automatically from this file. 
 
