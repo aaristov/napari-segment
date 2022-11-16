@@ -46,7 +46,7 @@ except PackageNotFoundError:
     __version__ = "Unknown"
 
 logging.basicConfig(
-    level=logging.WARNING, format="%(asctime)s %(levelname)s : %(message)s"
+    level=logging.DEBUG, format="%(asctime)s %(levelname)s : %(message)s"
 )
 logger = logging.getLogger("napari_segment._widget")
 
@@ -56,6 +56,7 @@ formatter = logging.Formatter(
 ff = logging.FileHandler("napari-segment.log")
 ff.setFormatter(formatter)
 logger.addHandler(ff)
+logger.setLevel(logging.DEBUG)
 
 
 class SegmentStack(q.QWidget):
@@ -249,6 +250,7 @@ class SegmentStack(q.QWidget):
             self.viewer.add_labels(
                 data=clone,
                 name="Manual Labels",
+                scale=self.scale,
                 metadata={
                     "binning": self.binning,
                     "source": self.viewer.layers["selected labels"],
@@ -352,9 +354,7 @@ class SegmentStack(q.QWidget):
 
         logger.debug(f"pixel size: {self.pixel_size} {self.pixel_unit}")
 
-        self.scale = np.ones((len(self.data.shape),))
-        self.scale[-2:] = self.binning
-        logger.debug(f"Computed scale for napari {self.scale}")
+        self.set_scale()
 
         if isinstance(self.data, np.ndarray):
             chunksize = np.ones(len(self.data.shape))
@@ -416,6 +416,11 @@ class SegmentStack(q.QWidget):
             sending {self.smooth_gradient} to thresholding"
         )
         self.threshold()
+
+    def set_scale(self):
+        self.scale = np.ones((len(self.data.shape),))
+        self.scale[-2:] = self.binning
+        logger.debug(f"Computed scale for napari {self.scale}")
 
     def threshold(self):
         logger.debug("Start thresholding step")
