@@ -247,7 +247,7 @@ class SegmentStack(q.QWidget):
         try:
             clone = self.selected_labels.compute()
 
-            self.viewer.add_labels(
+            self.manual_layer = self.viewer.add_labels(
                 data=clone,
                 name="Manual Labels",
                 scale=self.scale,
@@ -259,6 +259,7 @@ class SegmentStack(q.QWidget):
             self.stat_layer_selector.choices = ["Manual Labels"]
             self.viewer.layers["selected labels"].visible = False
             self.viewer.layers["Detections"].visible = False
+            self.viewer.layers["Preprocessing"].visible = False
             self.plot_stats(force=True)
 
         except Exception as e:
@@ -583,9 +584,9 @@ class SegmentStack(q.QWidget):
             show_error(f"Error saving csv: {e}")
 
         if self.stat_layer_selector.value == "Manual Labels":
-            out = self.layers["Manual labels"].save(self.path + ".labels.tif")
-            show_info(f"Manual labels saved {out}")
-            self.save_params(manual_labels=os.path.basename(out))
+            out = self.manual_layer.save(self.path + ".labels.tif")
+            show_info(f"Manual labels saved {out[0]}")
+            self.save_params(manual_labels=os.path.basename(out[0]))
 
     def save_params(self, **kwargs):
         data = {
