@@ -29,6 +29,10 @@ def test_segment_stack(make_napari_viewer):
     assert (mtitle := "Manual Labels") in viewer.layers
     assert isinstance(viewer.layers[mtitle].data, np.ndarray)
 
+    widget.save_csv()
+    assert os.path.exists(widget.path + ".table.csv")
+    assert os.path.exists(widget.path + ".labels.tif")
+
     # read captured output and check that it's as we expected
     # captured = capsys.readouterr()
     # assert captured.out == "napari has 1 layers\n"
