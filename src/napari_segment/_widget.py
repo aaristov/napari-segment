@@ -19,6 +19,7 @@ import napari
 import numpy as np
 import pandas as pd
 import qtpy.QtWidgets as q
+import tifffile as tf
 import yaml
 from magicgui import magic_factory
 from matplotlib.backends.backend_qt5agg import (
@@ -46,7 +47,7 @@ except PackageNotFoundError:
     __version__ = "Unknown"
 
 logging.basicConfig(
-    level=logging.DEBUG, format="%(asctime)s %(levelname)s : %(message)s"
+    level=logging.WARNING, format="%(asctime)s %(levelname)s : %(message)s"
 )
 logger = logging.getLogger("napari_segment._widget")
 
@@ -56,7 +57,7 @@ formatter = logging.Formatter(
 ff = logging.FileHandler("napari-segment.log")
 ff.setFormatter(formatter)
 logger.addHandler(ff)
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.WARNING)
 
 
 class SegmentStack(q.QWidget):
@@ -243,9 +244,18 @@ class SegmentStack(q.QWidget):
             if isinstance(layer, Image)
         ]
 
-    def make_manual_layer(self):
+    def make_manual_layer(self, data: np.ndarray = None):
         try:
-            clone = self.selected_labels.compute()
+            self.viewer.layers["Manual Labels"].remove()
+            logger.debug("Old Manual labels layer deleted")
+        except Exception as e:
+            logger.debug(f"No manual labels present, nothing to delete {e}")
+
+        try:
+            if isinstance(data, np.ndarray):
+                clone = data
+            else:
+                clone = self.selected_labels.compute()
 
             self.manual_layer = self.viewer.add_labels(
                 data=clone,
@@ -334,12 +344,7 @@ class SegmentStack(q.QWidget):
 
         self.binning = self.binning_widget.value
         self.raw_data = self.viewer.layers[self.input.current_choice].data
-        try:
-            self.data = self.raw_data[..., :: self.binning, :: self.binning]
-            logger.debug(f"data after binning: {self.data}")
-
-        except KeyError:
-            return
+        self.set_data()
 
         try:
             pixel_size = self.viewer.layers[
@@ -417,6 +422,17 @@ class SegmentStack(q.QWidget):
             sending {self.smooth_gradient} to thresholding"
         )
         self.threshold()
+
+    def set_data(self):
+        try:
+            self.data = self.raw_data[..., :: self.binning, :: self.binning]
+            logger.debug(f"data after binning: {self.data}")
+
+        except KeyError:
+            logger.error(
+                f"unable to bin the data {self.raw_data} \
+                    with binning {self.binning}"
+            )
 
     def set_scale(self):
         self.scale = np.ones((len(self.data.shape),))
@@ -586,6 +602,7 @@ class SegmentStack(q.QWidget):
         if self.stat_layer_selector.value == "Manual Labels":
             out = self.manual_layer.save(self.path + ".labels.tif")
             show_info(f"Manual labels saved {out[0]}")
+            logger.info(f"Manual labels saved {out[0]}")
             self.save_params(manual_labels=os.path.basename(out[0]))
 
     def save_params(self, **kwargs):
@@ -662,9 +679,22 @@ class SegmentStack(q.QWidget):
             self.max_ecc.value = data["max_ecc"]
             self.pixel_size = data["pixel_size"]
             self.pixel_unit = data["pixel_unit"]
+
         except Exception as e:
             show_error(f"Restore settings failed, {e}")
             logger.error(f"Restore settings failed, {e}")
+
+        self.preprocess()
+
+        try:
+            manual_labels_path = os.path.join(
+                os.path.dirname(self.path), data["manual_labels"]
+            )
+            manual_labels = tf.imread(manual_labels_path)
+            self.make_manual_layer(data=manual_labels)
+        except Exception as e:
+            show_error(f"Unable to restore manual labels {e}")
+            logger.error(f"Unable to restore manual labels {e}")
 
         self.binning_widget.changed.connect(self.preprocess)
         self.threshold_widget.changed.connect(self.threshold)
