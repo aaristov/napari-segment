@@ -371,6 +371,9 @@ class SegmentStack(q.QWidget):
         else:
             self.ddata = self.data.astype("f")
 
+        self.ddata = self.ddata.rechunk()
+        logger.info(f"Chunk size: {self.ddata.chunksize}")
+
         logger.debug(f"Dask array: {self.ddata}")
 
         logger.debug(f"Processing data with {self.use.value}")
