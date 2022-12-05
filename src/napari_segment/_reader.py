@@ -48,11 +48,14 @@ def napari_get_reader(path):
 def read_tif(path):
     data = tf.TiffFile(path)
     arr = data.asarray()
-    channel_axis = (
-        arr.shape.index(data.imagej_metadata["channels"])
-        if data.is_imagej
-        else None
-    )
+    try:
+        channel_axis = (
+            arr.shape.index(data.imagej_metadata["channels"])
+            if data.is_imagej
+            else None
+        )
+    except (ValueError, KeyError):
+        channel_axis = None
 
     return [
         (
