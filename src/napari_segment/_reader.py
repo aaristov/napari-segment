@@ -90,8 +90,11 @@ def read_nd2(path, **kwargs):
                 "channel_axis": channel_axis,
                 "metadata": {
                     "sizes": data.sizes,
+                    "dask_data": ddata,
                     "path": path,
                     "pixel_size_um": pixel_size_um,
+                    "channel_axis": channel_axis,
+                    "channel_axis_name": "C",
                 },
                 **kwargs,
             },
