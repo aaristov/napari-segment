@@ -567,6 +567,16 @@ class SegmentStack(q.QWidget):
         eccs = reduce(lambda a, b: a + b, eccs_)
         self.props_df.loc[:, (ecc_col := "eccentricity")] = eccs
 
+        maj_axis_len_ = [
+            [
+                (prop.axis_major_length) * (self.binning * self.pixel_size)
+                for prop in props_per_frame
+            ]
+            for i, props_per_frame in enumerate(props)
+        ]
+        maj_axis_len = reduce(lambda a, b: a + b, maj_axis_len_)
+        self.props_df.loc[:, "major_axis_length [um]"] = maj_axis_len
+
         data = self.props_df
         self._count.set_data(*zip(*enumerate(num_regions_per_frame)))
         self._diams.set_data(data["frame"], data[diam_col])
@@ -627,10 +637,10 @@ class SegmentStack(q.QWidget):
 
             with open(os.path.join(dir, new_name), "w") as f:
                 yaml.safe_dump(data, f)
-            show_info(f"Parameters saves into {new_name}")
+            # show_info(f"Parameters saves into {new_name}")
             logger.info(f"Parameters saves into {new_name}")
         except Exception as e:
-            show_error(f"Saving parameters into {new_name} failed: {e}")
+            # show_error(f"Saving parameters into {new_name} failed: {e}")
             logger.error(f"Saving parameters into {new_name} failed: {e}")
 
         with open((ff := ".latest.params.yaml"), "w") as f:
