@@ -70,6 +70,11 @@ jobs:
     needs: [test]
     runs-on: ubuntu-latest
     if: contains(github.ref, 'tags')
+    environment:
+      name: pypi
+      url: https://pypi.org/p/napari-segment
+    permissions:
+      id-token: write
     steps:
       - uses: actions/checkout@v2
       - name: Set up Python
@@ -81,10 +86,4 @@ jobs:
           python -m pip install --upgrade pip
           pip install -U setuptools setuptools_scm wheel twine build
       - name: Build and publish
-        env:
-          TWINE_USERNAME: __token__
-          TWINE_PASSWORD: ${{ secrets.TWINE_API_KEY }}
-        run: |
-          git tag
-          python -m build .
-          twine upload dist/*
+        uses: pypa/gh-action-pypi-publish@release/v1
